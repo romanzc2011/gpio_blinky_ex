@@ -1,0 +1,7 @@
+C:/Users/roman/STM32Cube/Repository/STM32Cube_FW_F4_V1.28.3/Drivers/CMSIS/Core/Include/core_cm4.h:1684:22:__NVIC_EnableIRQ	2
+C:/Users/roman/STM32Cube/Repository/STM32Cube_FW_F4_V1.28.3/Drivers/CMSIS/Core/Include/core_cm4.h:1814:22:__NVIC_SetPriority	2
+../Src/main.c:18:5:main	4
+../Src/main.c:43:13:GPIOA_Init	1
+../Src/main.c:52:13:GPIOD_Init	1
+../Src/main.c:75:13:TIM4_Init	1
+../Src/main.c:95:6:TIM4_IRQHandler	4

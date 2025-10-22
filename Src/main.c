@@ -2,23 +2,31 @@
 #include "stm32f407xx.h"
 #include "core_cm4.h"
 
+/* UIF (Update Interrupt Flag) is set when there is a pending interrupt,
+ * The UIF is a bit that is set in the SR register (Status Register)
+ * UIF = 1 means the Timer overflowed event pending, hardware set flag
+ * Interrrupt pending in NVIC: the interrupt line is asserted (because UIF is set)
+ * waiting for CPU to service it
+ * (TIMx->SR & TIM_SR_UIF) != 0 means a TIMER update event has occured
+ *
+ *
+ * This is a simple demonstration of a General Purpose TIMER blinking an
+ * LED */
+
 #define PA0    0
-#define LED12  12
-#define LED13  13
-#define LED14  14
-#define LED15  15
+#define LED12  12    // GREEN
+#define LED13  13    // ORANGE
+#define LED14  14    // RED
+#define LED15  15    // BLUE
 
 static void GPIOA_Init(void);
 static void GPIOD_Init(void);
 static void TIMx_Init(TIM_TypeDef *TIMx, IRQn_Type irqn, uint16_t psc, uint32_t arr);
 
-__IO uint8_t counter = 0;
-__IO uint8_t pressed = 0;
-
 int main(void)
 {
-	uint16_t TIM4_PSC = 6;
-	uint32_t TIM4_ARR = (59999-1);
+	uint16_t TIM4_PSC = 1343;
+	uint32_t TIM4_ARR = 31249;
 
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIODEN;
 	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN | RCC_APB1ENR_TIM2EN;
@@ -28,23 +36,8 @@ int main(void)
 
 	TIMx_Init(TIM4, TIM4_IRQn, TIM4_PSC, TIM4_ARR);  // Init TIM4
 
-	while(1) {
-		/******* BUTTON PUSH SECTION ***********************/
-		// Turn off LED15 if interrupt happened
-		if ((GPIOD->ODR & (1U << LED15)) != 0) {
-			GPIOD->ODR &= ~(1U << LED15);
-		}
-
-		// Press button and debounce
-		if (pressed) {
-			GPIOD->ODR ^= (1U << LED13);
-			pressed = 0;
-			while ((GPIOA->IDR & (1U << PA0)) != 0);
-		}
-
-		/******* BLINK LED14 via TIMER ***********************/
-
-	}
+	/* Loop until the update event flag is set*/
+	while (!(TIM4->SR & TIM_SR_UIF) != 0);
 }
 
 /* PA0 input with pull down */
@@ -96,7 +89,7 @@ static void TIMx_Init(TIM_TypeDef *TIMx, IRQn_Type irqn, uint16_t psc, uint32_t 
 	NVIC_SetPriority(irqn, 15);
 	NVIC_EnableIRQ(irqn);
 
-	TIMx->CR1 |= TIM_CR1_CEN;
+	TIMx->CR1 |= TIM_CR1_CEN;   // Start counting
 }
 
 /* TIM4 Interrupt handler */
@@ -104,16 +97,6 @@ void TIM4_IRQHandler(void)
 {
 	if (TIM4->SR & TIM_SR_UIF) {
 		TIM4->SR &= ~TIM_SR_UIF;
-		GPIOD->ODR |= (1U << LED15);
-
-		// sample PA0 button
-		if ((GPIOA->IDR & (1UL << PA0)) != 0) { // is button high?
-			if (counter++ >= 4) {
-				pressed = 1;
-				counter = 0;
-			}
-		} else {
-			counter = 0;
-		}
+		GPIOD->ODR ^= (1U << LED15);
 	}
 }

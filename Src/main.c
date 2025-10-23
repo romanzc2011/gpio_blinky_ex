@@ -28,16 +28,33 @@ int main(void)
 	uint16_t TIM4_PSC = 1343;
 	uint32_t TIM4_ARR = 31249;
 
+	uint32_t TIM2_ARR = 30000;
+	uint16_t TIM2_PSC = 1200;
+
+	uint16_t TIM3_PSC = 1100;
+	uint32_t TIM3_ARR = 31000;
+
+	uint16_t TIM5_PSC = 1000;
+	uint32_t TIM5_ARR = 31500;
+
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIODEN;
-	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN | RCC_APB1ENR_TIM2EN;
+	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN | RCC_APB1ENR_TIM2EN | RCC_APB1ENR_TIM3EN | RCC_APB1ENR_TIM5EN;
 
 	GPIOA_Init();
 	GPIOD_Init();
 
+	TIMx_Init(TIM2, TIM2_IRQn, TIM2_PSC, TIM2_ARR);  // Init TIM2
+	TIMx_Init(TIM3, TIM3_IRQn, TIM3_PSC, TIM3_ARR);  // Init TIM3
 	TIMx_Init(TIM4, TIM4_IRQn, TIM4_PSC, TIM4_ARR);  // Init TIM4
+	TIMx_Init(TIM5, TIM5_IRQn, TIM5_PSC, TIM5_ARR);  // Init TIM5
 
 	/* Loop until the update event flag is set*/
-	while (!(TIM4->SR & TIM_SR_UIF) != 0);
+	while (
+			((TIM4->SR & TIM_SR_UIF) == 0) &&
+			((TIM2->SR & TIM_SR_UIF) == 0) &&
+			((TIM3->SR & TIM_SR_UIF) == 0) &&
+			((TIM5->SR & TIM_SR_UIF) == 0)
+	);
 }
 
 /* PA0 input with pull down */
@@ -71,6 +88,13 @@ static void GPIOD_Init(void)
 	GPIOD->OTYPER  &= ~(1UL << LED12);
 	GPIOD->OSPEEDR &= ~(3UL << (LED12 * 2));
 	GPIOD->PUPDR   &= ~(3UL << (LED12 * 2));
+
+	// LED15
+	GPIOD->MODER   &= ~(3UL << (LED14 * 2));
+	GPIOD->MODER   |=  (1UL << (LED14 * 2));
+	GPIOD->OTYPER  &= ~(1UL << LED14);
+	GPIOD->OSPEEDR &= ~(3UL << (LED14 * 2));
+	GPIOD->PUPDR   &= ~(3UL << (LED14 * 2));
 }
 
 static void TIMx_Init(TIM_TypeDef *TIMx, IRQn_Type irqn, uint16_t psc, uint32_t arr)
@@ -92,6 +116,24 @@ static void TIMx_Init(TIM_TypeDef *TIMx, IRQn_Type irqn, uint16_t psc, uint32_t 
 	TIMx->CR1 |= TIM_CR1_CEN;   // Start counting
 }
 
+/* TIM2 Interrupt handler */
+void TIM2_IRQHandler(void)
+{
+	if (TIM2->SR & TIM_SR_UIF) {
+		TIM2->SR &= ~TIM_SR_UIF;
+		GPIOD->ODR ^= (1U << LED12);
+	}
+}
+
+/* TIM3 Interrupt handler */
+void TIM3_IRQHandler(void)
+{
+	if (TIM3->SR & TIM_SR_UIF) {
+		TIM3->SR &= ~TIM_SR_UIF;
+		GPIOD->ODR ^= (1U << LED13);
+	}
+}
+
 /* TIM4 Interrupt handler */
 void TIM4_IRQHandler(void)
 {
@@ -100,3 +142,14 @@ void TIM4_IRQHandler(void)
 		GPIOD->ODR ^= (1U << LED15);
 	}
 }
+
+/* TIM5 Interrupt handler */
+void TIM5_IRQHandler(void)
+{
+	if (TIM5->SR & TIM_SR_UIF) {
+		TIM5->SR &= ~TIM_SR_UIF;
+		GPIOD->ODR ^= (1U << LED14);
+	}
+}
+
+
